@@ -1,6 +1,6 @@
 This fork add support for Standard Zip Encryption.
 
-The work is based on https://github.com/alexmullins/zip
+The work is based on https://github.com/alexmullins/zip, https://github.com/yeka/zip and https://github.com/davrux/zip
 
 Available encryption:
 
