@@ -19,8 +19,10 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
+//EncryptionMethod ...
 type EncryptionMethod int
 
+//StandardEncryption
 const (
 	StandardEncryption EncryptionMethod = 1
 	AES128Encryption   EncryptionMethod = 2
@@ -428,7 +430,7 @@ func (h *FileHeader) writeWinZipExtra() {
 	// total size is 11 bytes
 	var buf [11]byte
 	eb := writeBuf(buf[:])
-	eb.uint16(winzipAesExtraId) // 0x9901
+	eb.uint16(winzipAesExtraID) // 0x9901
 	eb.uint16(7)                // following data size is 7
 	eb.uint16(2)                // ae 2
 	eb.uint16(0x4541)           // "AE"
