@@ -65,8 +65,8 @@ const (
 	uint32max = (1 << 32) - 1
 
 	// extra header id's
-	zip64ExtraId     = 0x0001 // zip64 Extended Information Extra Field
-	winzipAesExtraId = 0x9901 // winzip AES Extra Field
+	zip64ExtraID     = 0x0001 // zip64 Extended Information Extra Field
+	winzipAesExtraID = 0x9901 // winzip AES Extra Field
 )
 
 // FileHeader describes a file within a zip file.
@@ -108,8 +108,8 @@ type FileHeader struct {
 }
 
 // FileInfo returns an os.FileInfo for the FileHeader.
-func (h *FileHeader) FileInfo() os.FileInfo {
-	return headerFileInfo{h}
+func (fh *FileHeader) FileInfo() os.FileInfo {
+	return headerFileInfo{fh}
 }
 
 // headerFileInfo implements os.FileInfo.
@@ -193,60 +193,60 @@ func timeToMsDosTime(t time.Time) (fDate uint16, fTime uint16) {
 
 // ModTime returns the modification time in UTC.
 // The resolution is 2s.
-func (h *FileHeader) ModTime() time.Time {
-	return msDosTimeToTime(h.ModifiedDate, h.ModifiedTime)
+func (fh *FileHeader) ModTime() time.Time {
+	return msDosTimeToTime(fh.ModifiedDate, fh.ModifiedTime)
 }
 
 // SetModTime sets the ModifiedTime and ModifiedDate fields to the given time in UTC.
 // The resolution is 2s.
-func (h *FileHeader) SetModTime(t time.Time) {
-	h.ModifiedDate, h.ModifiedTime = timeToMsDosTime(t)
+func (fh *FileHeader) SetModTime(t time.Time) {
+	fh.ModifiedDate, fh.ModifiedTime = timeToMsDosTime(t)
 }
 
 const (
 	// Unix constants. The specification doesn't mention them,
 	// but these seem to be the values agreed on by tools.
-	s_IFMT   = 0xf000
-	s_IFSOCK = 0xc000
-	s_IFLNK  = 0xa000
-	s_IFREG  = 0x8000
-	s_IFBLK  = 0x6000
-	s_IFDIR  = 0x4000
-	s_IFCHR  = 0x2000
-	s_IFIFO  = 0x1000
-	s_ISUID  = 0x800
-	s_ISGID  = 0x400
-	s_ISVTX  = 0x200
+	sIFMT   = 0xf000
+	sIFSOCK = 0xc000
+	sIFLNK  = 0xa000
+	sIFREG  = 0x8000
+	sIFBLK  = 0x6000
+	sIFDIR  = 0x4000
+	sIFCHR  = 0x2000
+	sIFIFO  = 0x1000
+	sISUID  = 0x800
+	sISGID  = 0x400
+	sISVTX  = 0x200
 
 	msdosDir      = 0x10
 	msdosReadOnly = 0x01
 )
 
 // Mode returns the permission and mode bits for the FileHeader.
-func (h *FileHeader) Mode() (mode os.FileMode) {
-	switch h.CreatorVersion >> 8 {
+func (fh *FileHeader) Mode() (mode os.FileMode) {
+	switch fh.CreatorVersion >> 8 {
 	case creatorUnix, creatorMacOSX:
-		mode = unixModeToFileMode(h.ExternalAttrs >> 16)
+		mode = unixModeToFileMode(fh.ExternalAttrs >> 16)
 	case creatorNTFS, creatorVFAT, creatorFAT:
-		mode = msdosModeToFileMode(h.ExternalAttrs)
+		mode = msdosModeToFileMode(fh.ExternalAttrs)
 	}
-	if len(h.Name) > 0 && h.Name[len(h.Name)-1] == '/' {
+	if len(fh.Name) > 0 && fh.Name[len(fh.Name)-1] == '/' {
 		mode |= os.ModeDir
 	}
 	return mode
 }
 
 // SetMode changes the permission and mode bits for the FileHeader.
-func (h *FileHeader) SetMode(mode os.FileMode) {
-	h.CreatorVersion = h.CreatorVersion&0xff | creatorUnix<<8
-	h.ExternalAttrs = fileModeToUnixMode(mode) << 16
+func (fh *FileHeader) SetMode(mode os.FileMode) {
+	fh.CreatorVersion = fh.CreatorVersion&0xff | creatorUnix<<8
+	fh.ExternalAttrs = fileModeToUnixMode(mode) << 16
 
 	// set MSDOS attributes too, as the original zip does.
 	if mode&os.ModeDir != 0 {
-		h.ExternalAttrs |= msdosDir
+		fh.ExternalAttrs |= msdosDir
 	}
 	if mode&0200 == 0 {
-		h.ExternalAttrs |= msdosReadOnly
+		fh.ExternalAttrs |= msdosReadOnly
 	}
 }
 
@@ -271,59 +271,59 @@ func fileModeToUnixMode(mode os.FileMode) uint32 {
 	var m uint32
 	switch mode & os.ModeType {
 	default:
-		m = s_IFREG
+		m = sIFREG
 	case os.ModeDir:
-		m = s_IFDIR
+		m = sIFDIR
 	case os.ModeSymlink:
-		m = s_IFLNK
+		m = sIFLNK
 	case os.ModeNamedPipe:
-		m = s_IFIFO
+		m = sIFIFO
 	case os.ModeSocket:
-		m = s_IFSOCK
+		m = sIFSOCK
 	case os.ModeDevice:
 		if mode&os.ModeCharDevice != 0 {
-			m = s_IFCHR
+			m = sIFCHR
 		} else {
-			m = s_IFBLK
+			m = sIFBLK
 		}
 	}
 	if mode&os.ModeSetuid != 0 {
-		m |= s_ISUID
+		m |= sISUID
 	}
 	if mode&os.ModeSetgid != 0 {
-		m |= s_ISGID
+		m |= sISGID
 	}
 	if mode&os.ModeSticky != 0 {
-		m |= s_ISVTX
+		m |= sISVTX
 	}
 	return m | uint32(mode&0777)
 }
 
 func unixModeToFileMode(m uint32) os.FileMode {
 	mode := os.FileMode(m & 0777)
-	switch m & s_IFMT {
-	case s_IFBLK:
+	switch m & sIFMT {
+	case sIFBLK:
 		mode |= os.ModeDevice
-	case s_IFCHR:
+	case sIFCHR:
 		mode |= os.ModeDevice | os.ModeCharDevice
-	case s_IFDIR:
+	case sIFDIR:
 		mode |= os.ModeDir
-	case s_IFIFO:
+	case sIFIFO:
 		mode |= os.ModeNamedPipe
-	case s_IFLNK:
+	case sIFLNK:
 		mode |= os.ModeSymlink
-	case s_IFREG:
+	case sIFREG:
 		// nothing to do
-	case s_IFSOCK:
+	case sIFSOCK:
 		mode |= os.ModeSocket
 	}
-	if m&s_ISGID != 0 {
+	if m&sISGID != 0 {
 		mode |= os.ModeSetgid
 	}
-	if m&s_ISUID != 0 {
+	if m&sISUID != 0 {
 		mode |= os.ModeSetuid
 	}
-	if m&s_ISVTX != 0 {
+	if m&sISVTX != 0 {
 		mode |= os.ModeSticky
 	}
 	return mode
