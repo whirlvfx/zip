@@ -15,27 +15,23 @@ import (
 	"os"
 )
 
-//ErrFormat
 var (
 	ErrFormat    = errors.New("zip: not a valid zip file")
 	ErrAlgorithm = errors.New("zip: unsupported compression algorithm")
 	ErrChecksum  = errors.New("zip: checksum error")
 )
 
-//Reader - Struct for Reader
 type Reader struct {
 	r       io.ReaderAt
 	File    []*File
 	Comment string
 }
 
-//ReadCloser - Struct for ReaderCloser
 type ReadCloser struct {
 	f *os.File
 	Reader
 }
 
-//File  - Struct for File
 type File struct {
 	FileHeader
 	zipr         io.ReaderAt
@@ -151,7 +147,7 @@ func (f *File) Open() (rc io.ReadCloser, err error) {
 	if f.IsEncrypted() {
 
 		if f.ae == 0 {
-			if r, err = CryptoDecryptor(rr, f.password()); err != nil {
+			if r, err = ZipCryptoDecryptor(rr, f.password()); err != nil {
 				return
 			}
 		} else if r, err = newDecryptionReader(rr, f); err != nil {
@@ -295,7 +291,7 @@ func readDirectoryHeader(f *File, r io.Reader) error {
 			}
 			eb := readBuf(b[:size])
 			switch tag {
-			case zip64ExtraID:
+			case zip64ExtraId:
 				// update directory values from the zip64 extra block
 				if len(eb) >= 8 {
 					f.UncompressedSize64 = eb.uint64()
@@ -306,7 +302,7 @@ func readDirectoryHeader(f *File, r io.Reader) error {
 				if len(eb) >= 8 {
 					f.headerOffset = int64(eb.uint64())
 				}
-			case winzipAesExtraID:
+			case winzipAesExtraId:
 				// grab the AE version
 				f.ae = eb.uint16()
 				// skip vendor ID
